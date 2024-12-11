@@ -1,101 +1,93 @@
 import streamlit as st
-import cv2
 import easyocr
+import pandas as pd
+import numpy as np
+from PIL import Image
 from fuzzywuzzy import process
 import os
 
-# Initialize EasyOCR Reader
+# Initialize the EasyOCR reader
 reader = easyocr.Reader(['en'])
 
-# List of brands and categories (same as before)
+# List of brands to detect and categorize by their type
 brands_categories = {
-    'Food & Beverages': [...],  # Truncated for brevity
-    'Personal Care': [...],
-    'Household Items': [...],
-    'Baby Care': [...],
-    'Electronics & Accessories': [...]
+    'Food & Beverages': ['Kurkure', 'Lays', 'Tedhe Medhe', 'Ruffles', 'Cadbury Dairy Milk', 'Bingo', 'Mad Angles',
+                         'RUFFLES', 'Diamond', 'Kelloggs', 'CHOCOS', 'Priniti', 'Dairy Milk', 'Uncle Chipps', 'Nestle',
+                         'Doritos', 'BRU', 'Pepsi', 'MAGGI', 'Magnum', 'Bisleri', 'Kinley', 'Himalayan', 'Bailley',
+                         'Evian', 'Aquafina', 'Divya Jal', 'Patanjali', 'Qua', 'Rail Neer', 'Amul', 'Baskin Robbins',
+                         'Havmor', 'Mother Dairy', 'Arun Ice Cream', 'Tata Sampann', 'Aashirvaad', 'Catch', 'Sunrise',
+                         'Everest', 'Organic Tattva', 'MDH', 'Patanjali', 'Paper Boat', 'Urban Platter', 'Nutraj',
+                         'Wingreens Schezwan', 'Kissan Knorr Schezwan', 'Ching’s Secret Schezwan', 'Gusto Foods Schezwan',
+                         'Kopiko', 'Skittles'],
+    'Personal Care': ['Pantene', 'Dove', 'Colgate', 'NIVEA', 'Himalaya', 'Dettol', 'Lifebuoy', 'LUX', 'INTERNATIONAL LUX',
+                      'Pears', 'Pears naturale'],
+    'Household Items': ['Harpic', 'Lizol', 'Vim']
 }
 
-# Function to detect brand and category
+# Function to detect brand names using fuzzy matching and categorize them
 def detect_brand(text, brands_categories, threshold=70):
     detected_brands = []
     detected_category = None
 
     for category, brands in brands_categories.items():
         match, score = process.extractOne(text, brands)
-        if score > threshold:
+        if score > threshold:  # Only consider it a match if the score is above threshold
             detected_brands.append(match)
             detected_category = category
-            break
+            break  # Stop after finding the first match
 
     return detected_brands[0] if detected_brands else "N/A", detected_category if detected_category else "N/A"
 
-# Function to initialize video capture
-def initialize_camera():
-    try:
-        cap = cv2.VideoCapture(0)
-        if not cap.isOpened():
-            st.error("Error: Unable to access the camera.")
-            return None
-        return cap
-    except Exception as e:
-        st.error(f"Camera initialization failed: {e}")
-        return None
-
-# Main Streamlit App
+# Streamlit app
 def main():
-    st.title("Real-Time Brand Detection")
-    st.sidebar.header("Options")
+    st.title("Image Text Extraction and Brand Categorization")
 
-    start_detection = st.sidebar.button("Start Detection")
+    uploaded_files = st.file_uploader("Upload Images", type=['png', 'jpg', 'jpeg'], accept_multiple_files=True)
 
-    if start_detection:
-        cap = initialize_camera()
-        if not cap:
-            return
-
+    if uploaded_files:
         results = []
-        frame_no = 0
-        last_detected = ""
 
-        stframe = st.empty()  # Placeholder for displaying frames
+        for uploaded_file in uploaded_files:
+            # Open the uploaded image
+            image = Image.open(uploaded_file)
 
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                st.warning("Failed to capture frame.")
-                break
+            # Display the image
+            st.image(image, caption=f"Uploaded Image: {uploaded_file.name}", use_column_width=True)
 
-            # Convert frame to grayscale
-            gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            # Convert image to array
+            img_array = np.array(image)
 
             # Extract text using EasyOCR
-            result = reader.readtext(gray_frame, detail=0)
-            text = ' '.join(result)
+            result = reader.readtext(img_array, detail=0)
+            extracted_text = ' '.join(result)
 
-            # Detect brand and category
-            detected_brand, detected_category = detect_brand(text, brands_categories)
+            # Display extracted text
+            st.write(f"**Extracted Text from {uploaded_file.name}:** {extracted_text}")
 
-            if detected_brand != last_detected:
-                last_detected = detected_brand
-                frame_no += 1
-                results.append({
-                    'Frame': frame_no,
-                    'Detected Brand': detected_brand,
-                    'Category': detected_category
-                })
+            # Detect brand names and categories using fuzzy matching
+            detected_brand, detected_category = detect_brand(extracted_text, brands_categories)
 
-                # Display results
-                st.write(f"**Frame {frame_no}**: Detected Brand: {detected_brand}, Category: {detected_category}")
+            # Append results
+            results.append({
+                "Image": uploaded_file.name,
+                "Detected Brand": detected_brand,
+                "Category": detected_category
+            })
 
-            # Annotate the frame
-            cv2.putText(frame, f"Brand: {detected_brand}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            cv2.putText(frame, f"Category: {detected_category}", (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        # Display results as a DataFrame
+        if results:
+            df = pd.DataFrame(results)
+            st.write("### Detected Brands and Categories:")
+            st.dataframe(df)
 
-            # Display frame
-            stframe.image(frame, channels="BGR", use_column_width=True)
-
-        cap.release()
+            # Allow the user to download the results as a CSV file
+            csv = df.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="Download Results as CSV",
+                data=csv,
+                file_name='extracted_details.csv',
+                mime='text/csv'
+            )
 
 if __name__ == "__main__":
     main()

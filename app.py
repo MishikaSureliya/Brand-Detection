@@ -2,7 +2,6 @@ import streamlit as st
 import cv2
 import easyocr
 from fuzzywuzzy import process
-import csv
 import os
 
 # Initialize EasyOCR Reader
@@ -31,21 +30,35 @@ def detect_brand(text, brands_categories, threshold=70):
 
     return detected_brands[0] if detected_brands else "N/A", detected_category if detected_category else "N/A"
 
+# Function to initialize video capture
+def initialize_camera():
+    try:
+        cap = cv2.VideoCapture(0)
+        if not cap.isOpened():
+            st.error("Error: Unable to access the camera.")
+            return None
+        return cap
+    except Exception as e:
+        st.error(f"Camera initialization failed: {e}")
+        return None
+
 # Main Streamlit App
 def main():
     st.title("Real-Time Brand Detection")
     st.sidebar.header("Options")
+
     start_detection = st.sidebar.button("Start Detection")
 
     if start_detection:
-        cap = cv2.VideoCapture(0)  # Open the camera
-        if not cap.isOpened():
-            st.error("Error: Unable to access the camera.")
+        cap = initialize_camera()
+        if not cap:
             return
 
         results = []
         frame_no = 0
         last_detected = ""
+
+        stframe = st.empty()  # Placeholder for displaying frames
 
         while True:
             ret, frame = cap.read()
@@ -75,10 +88,12 @@ def main():
                 # Display results
                 st.write(f"**Frame {frame_no}**: Detected Brand: {detected_brand}, Category: {detected_category}")
 
-            # Display video frame with annotations
+            # Annotate the frame
             cv2.putText(frame, f"Brand: {detected_brand}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
             cv2.putText(frame, f"Category: {detected_category}", (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            st.image(frame, channels="BGR")
+
+            # Display frame
+            stframe.image(frame, channels="BGR", use_column_width=True)
 
         cap.release()
 

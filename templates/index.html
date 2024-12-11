@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brand Detection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f5faff; 
+            color: #212121; 
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #2874f0; 
+            margin-bottom: 10px;
+        }
+
+        p {
+            font-size: 1.2rem;
+            color: #333;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            color: #fff;
+            background-color: #2874f0;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        button:hover {
+            background-color: #005bb5; 
+        }
+
+        #live-feed {
+            width: 80%;
+            margin: 20px 0;
+            border: 5px solid #ffd700; 
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 80%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #2874f0; 
+            color: white;
+            font-size: 1rem;
+        }
+
+        td {
+            font-size: 0.9rem;
+            color: #212121;
+        }
+
+        tbody tr:nth-child(odd) {
+            background-color: #f9f9f9;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #fff;
+        }
+
+        tbody tr:hover {
+            background-color: #ffd700; 
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Brand Detection</h1>
+    <p>Click the button below to start scanning.</p>
+    <button onclick="startScanning()">Start Scanning</button>
+
+    <h2>Live Feed:</h2>
+    <img id="live-feed" src="/video_feed" alt="Live feed from camera">
+
+    <h2>Detection Results:</h2>
+    <table id="results-table">
+        <thead>
+            <tr>
+                <th>Frame</th>
+                <th>Detected Brand</th>
+                <th>Category</th>
+            </tr>
+        </thead>
+        <tbody id="results-body">
+        </tbody>
+    </table>
+
+    <script>
+        function startScanning() {
+            setInterval(updateTable, 5000);
+        }
+
+        function updateTable() {
+            fetch('/results')
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.getElementById('results-body');
+                    tableBody.innerHTML = ''; // Clear previous results
+                    data.results.forEach(result => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${result.Frame}</td>
+                            <td>${result['Detected Brand']}</td>
+                            <td>${result.Category}</td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                });
+        }
+    </script>
+</body>
+</html>

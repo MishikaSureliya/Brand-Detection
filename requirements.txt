@@ -1,8 +1,7 @@
 streamlit
 easyocr
-torch==1.12.1+cpu
-torchvision==0.13.1+cpu
--f https://download.pytorch.org/whl/cpu
+torch
+torchvision
 pandas
 numpy
 Pillow
